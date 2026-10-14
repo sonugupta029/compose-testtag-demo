@@ -1,0 +1,47 @@
+name: iosApp
+options:
+  bundleIdPrefix: io.github.testidspike
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    ENABLE_USER_SCRIPT_SANDBOXING: false
+
+targets:
+  ComposeTestTagDemo:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.testidspike
+        INFOPLIST_FILE: iosApp/Info.plist
+        FRAMEWORK_SEARCH_PATHS: "$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LINKER_FLAGS: "$(inherited) -framework ComposeApp"
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_IDENTITY: "Apple Development"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+    preBuildScripts:
+      - name: "Build Compose Framework"
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+        basedOnDependencyAnalysis: false
+    postBuildScripts:
+      - name: "Embed Compose Framework"
+        script: |
+          FRAMEWORK_PATH="${SRCROOT}/../composeApp/build/xcode-frameworks/${CONFIGURATION}/${SDK_NAME}/ComposeApp.framework"
+          if [ -d "$FRAMEWORK_PATH" ]; then
+            mkdir -p "${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+            cp -R "$FRAMEWORK_PATH" "${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/"
+            if [ -n "${EXPANDED_CODE_SIGN_IDENTITY}" ]; then
+              codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY}" --preserve-metadata=identifier,entitlements "${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/ComposeApp.framework"
+            fi
+          fi
+        basedOnDependencyAnalysis: false
